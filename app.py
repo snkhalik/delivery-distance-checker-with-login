@@ -4,7 +4,7 @@ from io import BytesIO
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
-import streamlit_authenticator as stauth  # <--- tambahan
+import streamlit_authenticator as stauth  # auth
 
 # =========================
 #  DISTANCE & DATA HELPERS
@@ -236,34 +236,52 @@ def main():
         layout="wide",
     )
 
-    # -------- LOGIN SECTION (AUTH) --------
-    names = ["Admin User", "Ops User"]
-    usernames = ["admin", "ops"]
-    passwords = ["paxel123", "ops123"]
+    # -------- LOGIN SECTION (versi baru streamlit-authenticator) --------
+    # credentials dalam bentuk dict (tanpa Hasher manual)
+    credentials = {
+        "usernames": {
+            "admin": {
+                "name": "Admin User",
+                "password": "paxel123",  # akan di-hash otomatis (auto_hash=True default)
+            },
+            "ops": {
+                "name": "Ops User",
+                "password": "ops123",
+            },
+        }
+    }
 
-    hashed_passwords = stauth.Hasher().generate(passwords)
-
-
+    # auto_hash=True (default) -> password plain text akan di-hash otomatis
     authenticator = stauth.Authenticate(
-        names,
-        usernames,
-        hashed_passwords,
-        "cookie_name",
-        "signature_key",
+        credentials,
+        "cookie_name",   # bebas, asal konsisten
+        "signature_key", # bebas, tapi sebaiknya random string
         cookie_expiry_days=1,
     )
 
-    name, auth_status, username = authenticator.login("Login", "main")
-
-    if auth_status is False:
-        st.error("Incorrect username or password")
-        return
-    elif auth_status is None:
-        st.info("Please log in to continue")
+    # render login form
+    try:
+        authenticator.login(location="main")
+    except Exception as e:
+        st.error(f"Auth error: {e}")
         return
 
-    # Jika berhasil login, lanjut ke app
-    st.success(f"Welcome *{name}*")
+    auth_status = st.session_state.get("authentication_status", None)
+    name = st.session_state.get("name", None)
+
+    if auth_status:
+        st.success(f"Welcome *{name}*")
+    elif auth_status is False:
+        st.error("Username/password is incorrect")
+        return
+    else:
+        st.info("Please enter your username and password")
+        return
+
+    # optional: tombol logout di sidebar
+    authenticator.logout("Logout", "sidebar")
+
+    # -------- APP CONTENT MULAI DI SINI (setelah login) --------
     st.title("Delivery vs Actual Dropoff Distance Validation")
 
     # -------- SIDEBAR FILTERS --------
