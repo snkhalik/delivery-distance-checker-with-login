@@ -241,7 +241,8 @@ def main():
     usernames = ["admin", "ops"]
     passwords = ["paxel123", "ops123"]
 
-    hashed_passwords = stauth.Hasher(passwords).generate()
+    hashed_passwords = stauth.Hasher().generate(passwords)
+
 
     authenticator = stauth.Authenticate(
         names,
